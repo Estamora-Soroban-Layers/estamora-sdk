@@ -1,62 +1,34 @@
 {
-  "name": "@estamora/conformance-spec",
-  "version": "0.1.1",
-  "private": true,
-  "description": "Normative, machine-readable specification layer for Estamora: profiles, vectors, schemas and validation tooling for Soroban contract behavioral conformance.",
-  "license": "Apache-2.0",
-  "type": "module",
-  "engines": {
-    "node": ">=22.12.0"
-  },
-  "packageManager": "npm@11.19.0",
+  "name": "@estamora/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK, pre-flight simulation engine, and integration layer for Estamora on Stellar",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "files": [
-    "schema",
-    "profiles"
+    "dist"
   ],
   "scripts": {
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
-    "typecheck": "tsc --noEmit",
-    "validate:schemas": "tsx scripts/validate-schema.ts",
-    "validate:profiles": "tsx scripts/validate-profiles.ts",
-    "validate:vectors": "tsx scripts/check-vectors.ts",
-    "validate": "npm run validate:schemas && npm run validate:profiles && npm run validate:vectors && npm run release:check",
-    "docs:generate": "tsx scripts/generate-docs.ts",
-    "docs:check": "tsx scripts/generate-docs.ts --check",
-    "release:check": "tsx scripts/release-check.ts",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
-    "test:watch": "vitest",
-    "check:doc-links": "python3 scripts/check-doc-links.py",
-    "ci": "npm run format:check && npm run typecheck && npm run check:doc-links && npm run validate && npm run docs:check && npm run test:coverage"
-  },
-  "dependencies": {
-    "ajv": "8.20.0",
-    "ajv-formats": "3.0.1",
-    "yaml": "2.9.1"
-  },
-  "devDependencies": {
-    "@types/node": "26.5.1",
-    "@vitest/coverage-v8": "5.0.0",
-    "prettier": "3.9.6",
-    "tsx": "4.23.13",
-    "typescript": "7.0.2",
-    "vitest": "5.0.0"
+    "build": "tsc",
+    "test": "tsx --test test/*.test.ts",
+    "typecheck": "tsc --noEmit"
   },
   "keywords": [
     "stellar",
     "soroban",
-    "conformance",
-    "specification",
-    "json-schema",
-    "sep-41"
+    "payments",
+    "escrow",
+    "sdk",
+    "spend-limits",
+    "ai-agents"
   ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Estamora-Soroban-Layers/estamora-conformance-spec.git"
+  "author": "winningtalker-commits",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@stellar/stellar-sdk": "^13.0.0"
   },
-  "bugs": {
-    "url": "https://github.com/Estamora-Soroban-Layers/estamora-conformance-spec/issues"
-  },
-  "homepage": "https://github.com/Estamora-Soroban-Layers/estamora-conformance-spec#readme"
+  "devDependencies": {
+    "@types/node": "^22.5.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.5.4"
+  }
 }
