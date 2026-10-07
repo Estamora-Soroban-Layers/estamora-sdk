@@ -76,7 +76,7 @@ jobs:
       # an unreviewed revision over the normative `$id`s that consumers resolve.
       - name: Configure Pages
         if: github.event_name != 'pull_request'
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v6
 
       - name: Upload the site
         if: github.event_name != 'pull_request'
