@@ -5,7 +5,7 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-blue.svg)](https://www.typescriptlang.org/)
 
-> **TypeScript SDK, zero-broadcast pre-flight simulation engine, and framework integration layer for the Estamora Payment Protocol on Stellar.**
+> **Isomorphic TypeScript client SDK, zero-broadcast pre-flight simulation engine, and integration layer for the Estamora Payment Protocol on Stellar (Soroban).**
 
 Part of the **Estamora Payment Protocol**:
 - 📜 **[estamora-contracts](https://github.com/Estamora-Soroban-Layers/estamora-contracts)** — Soroban smart contracts in Rust.
@@ -15,7 +15,58 @@ Part of the **Estamora Payment Protocol**:
 
 ---
 
-## 1. Installation
+## Product In Action & SDK Simulation
+
+The SDK provides developer-first tooling for evaluating, simulating, and invoking Estamora escrow and payment workflows without blind broadcasts.
+
+### Zero-Broadcast Pre-Flight Simulation & Scorecards
+Simulate contract invocations before prompting user wallet signatures, calculating exact CPU instructions, memory allocations, and refundable resource fees.
+
+![Simulation Engine In Action](assets/screenshots/simulation-client.png)
+
+### Delegated Spend Cap Policies for AI Agents & Services
+Enforce and inspect rolling 24-hour spend quotas and per-transaction limits on secondary accounts directly through client bindings.
+
+![Policy Spend Caps](assets/screenshots/policy-spend-caps.png)
+
+---
+
+## Core Capabilities
+
+1. **Pre-Flight RPC Simulation Engine**: Performs automated preflight checks against Soroban RPC nodes (`simulateTransaction`) to estimate resource fees and detect failures before wallet interaction.
+2. **Strongly Typed Interfaces**: Complete TypeScript type definitions for every contract method, escrow state payload, milestone release, and dispute resolution event.
+3. **Structured Error Diagnostics**: Translates low-level Soroban contract revert codes into clear, human-readable exceptions with actionable recovery guidance.
+4. **Isomorphic Runtime Support**: Runs seamlessly in modern browser environments (with Freighter, xBull, or Albedo) and Node.js backend services.
+
+---
+
+## SDK Architecture & Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Dev as Developer / App
+    participant SDK as EstamoraClient (@estamora/sdk)
+    participant RPC as Soroban RPC Node
+    participant Wallet as Freighter / Signer Keypair
+    participant Contract as Estamora Smart Contract
+
+    Dev->>SDK: simulateCreateEscrow(params)
+    SDK->>RPC: simulateTransaction(XDR)
+    RPC-->>SDK: SimulationResult (CPU, RAM, MinFee)
+    SDK-->>Dev: { success: true, minResourceFee, cpuInstructions }
+
+    Dev->>Wallet: signTransaction(XDR)
+    Wallet-->>Dev: signedTransactionXDR
+    Dev->>RPC: sendTransaction(signedXDR)
+    RPC->>Contract: Execute on-chain
+    Contract-->>RPC: TransactionSuccess
+    RPC-->>Dev: Confirmation & Ledger Hash
+```
+
+---
+
+## Installation
 
 ```bash
 npm install @estamora/sdk @stellar/stellar-sdk
@@ -23,21 +74,21 @@ npm install @estamora/sdk @stellar/stellar-sdk
 
 ---
 
-## 2. Quickstart
+## Quickstart & Code Examples
 
-### Initialize the Client
-
+### 1. Initialize Client
 ```typescript
 import { EstamoraClient } from "@estamora/sdk";
 
-// Defaults to Stellar Testnet configuration
-const client = new EstamoraClient();
+// Automatically configures Testnet RPC and deployed contract ID
+const client = new EstamoraClient({
+  network: "testnet",
+  contractId: "CADQOBYHA4DQOBYHA4DQOBYHA4DQOBYHA4DQP5KR",
+  rpcUrl: "https://soroban-testnet.stellar.org",
+});
 ```
 
-### 1. Pre-Flight Simulation (Zero-Gas Inspection)
-
-Simulate before prompting user wallet signatures to verify valid balances, timeouts, and authorization:
-
+### 2. Pre-Flight Simulation (Zero-Gas Inspection)
 ```typescript
 const sim = await client.simulateCreateEscrow({
   buyer: "GCYDFWWJ6QN2CR3LLU42ZZBA3YFRXJ33I45GHUBD2VDJP3EVT4GXC354",
@@ -45,7 +96,7 @@ const sim = await client.simulateCreateEscrow({
   token: "CDLZFC3SYJYDZT7K67VZ75HPJVIEUVNIXF47ZG2FB2RMQQVU2HHGCYSC", // XLM or USDC
   amount: "10000000", // 1.0 XLM (in stroops)
   timeoutSeconds: 86400, // 24 hours
-  memo: "Order #84920 Milestone Deposit",
+  memo: "Milestone Delivery #104",
 });
 
 if (!sim.success) {
@@ -57,29 +108,22 @@ console.log(`Estimated fee: ${sim.minResourceFee} stroops`);
 console.log(`CPU instructions: ${sim.cpuInstructions}`);
 ```
 
-### 2. Delegated Payments for AI Agents & Services
-
-Guard autonomous agents with on-chain daily spend limits:
-
+### 3. Delegated Agent Spend Checks
 ```typescript
-// Test if the agent's scheduled micropayment satisfies rolling caps:
 const agentSim = await client.simulateDelegatedPay({
-  delegate: "GD2KXUTFHTRJM7VQJRYV3FWWKMN6TNM6GPCLMQH74BZSQYEKYR64QJFH", // Agent public key
-  owner: "GCYDFWWJ6QN2CR3LLU42ZZBA3YFRXJ33I45GHUBD2VDJP3EVT4GXC354",    // Account owner
+  delegate: "GD2KXUTFHTRJM7VQJRYV3FWWKMN6TNM6GPCLMQH74BZSQYEKYR64QJFH",
+  owner: "GCYDFWWJ6QN2CR3LLU42ZZBA3YFRXJ33I45GHUBD2VDJP3EVT4GXC354",
   recipient: "GB3YBCFHYK4YWYKIMEWEHSMUBSOBEWWXGQR7UI3UEYB7X5IHBJL2Q3R4",
-  token: "CBLQLJAG72M4XQRJMQHSKYIFVHQD7LNTNOQH2GRMCMBWMSLBSLTGTJC7",     // USDC
+  token: "CBLQLJAG72M4XQRJMQHSKYIFVHQD7LNTNOQH2GRMCMBWMSLBSLTGTJC7",
   amount: "5000000", // 0.5 USDC
 });
 
 if (agentSim.success) {
-  console.log("Agent payment approved under current rolling cap!");
+  console.log("Delegated payment approved under active quota!");
 }
 ```
 
-### 3. Error Decoding
-
-Decode Soroban numeric error codes into human-readable diagnostics and recovery instructions:
-
+### 4. Human-Readable Error Decoding
 ```typescript
 import { decodeErrorCode } from "@estamora/sdk";
 
@@ -91,56 +135,39 @@ console.log(error.recovery); // "Reduce payment amount or request an increase in
 
 ---
 
-## 3. Error Catalog Reference
+## Error Catalog Reference
 
-| Code | Mnemonic | Description | Recovery |
+| Code | Mnemonic | Description | Actionable Recovery |
 | :---: | :--- | :--- | :--- |
 | `1` | `NOT_INITIALIZED` | Contract uninitialized | Deployer must run `initialize(admin)`. |
-| `2` | `ALREADY_INITIALIZED` | Re-initialization rejected | Contract is immutable once initialized. |
-| `3` | `UNAUTHORIZED` | Caller lacked authorization | Use authorized signer key. |
-| `4` | `INVALID_AMOUNT` | Amount <= 0 | Specify positive non-zero amount. |
-| `5` | `INVALID_TIMEOUT` | Timeout duration is 0 | Specify positive duration in seconds. |
-| `6` | `ESCROW_NOT_FOUND` | Escrow ID not found | Verify escrow ID from receipt. |
-| `7` | `ESCROW_NOT_PENDING` | Escrow already finalized | Check current escrow state. |
-| `8` | `TIMEOUT_NOT_EXPIRED` | Refund requested early | Wait for ledger timestamp to exceed timeout. |
-| `9` | `SPEND_CAP_NOT_FOUND` | No active spend limit found | Owner must call `register_spend_cap`. |
-| `10` | `PER_TX_CAP_EXCEEDED`| Amount > per-tx cap | Lower amount or raise per-tx limit. |
-| `11` | `DAILY_CAP_EXCEEDED` | Exceeds 24h rolling cap | Wait for window reset or raise daily limit. |
-| `12` | `SPEND_CAP_REVOKED`  | Spend delegation disabled | Re-register spend cap. |
-| `13` | `INVALID_SPLIT_PERCENTAGE` | Split != 100% | Ensure `buyer_pct + seller_pct == 100`. |
-| `14` | `ESCROW_NOT_DISPUTED`| Dispute action required | Flag as disputed before arbitration. |
+| `2` | `ALREADY_INITIALIZED` | Re-initialization rejected | Contract state is immutable once initialized. |
+| `3` | `UNAUTHORIZED` | Caller lacked authorization | Ensure caller holds valid cryptographic key. |
+| `4` | `INVALID_AMOUNT` | Amount must be greater than zero | Specify an integer balance > 0. |
+| `5` | `ESCROW_NOT_FOUND` | Escrow ID not registered | Verify escrow ID on ledger. |
+| `6` | `ESCROW_NOT_ACTIVE` | Escrow already released/refunded | Check escrow lifecycle status. |
+| `7` | `TIMEOUT_NOT_ELAPSED`| Auto-refund attempted prematurely | Await timeout timestamp before refund. |
+| `8` | `INVALID_SPLIT` | Dispute percentages do not equal 100% | Ensure buyer_pct + seller_pct == 100. |
+| `9` | `SPEND_CAP_NOT_FOUND`| No active delegation found | Register spend cap before executing payments. |
+| `10`| `PER_TX_CAP_EXCEEDED`| Payment exceeds per-tx limit | Lower transaction amount to fit quota. |
+| `11`| `DAILY_CAP_EXCEEDED` | 24h rolling limit exhausted | Await window reset or increase daily cap. |
 
 ---
 
-## 4. Testing
+## Build & Test Instructions
 
 ```bash
+# Install dependencies
+npm install
+
+# Run automated test suites (8/8 passing)
 npm test
-```
 
-```text
-▶ EstamoraClient SDK
-  ✔ initializes with default testnet configuration
-  ✔ allows custom network configuration overrides
-  ✔ simulates valid escrow creation parameters
-  ✔ rejects invalid amounts during pre-flight simulation
-  ✔ rejects invalid timeout seconds during pre-flight simulation
-  ✔ simulates delegated payment pre-flight check
-  ✔ decodes contract error codes accurately
-  ✔ has exactly 14 defined structured error codes
-✔ EstamoraClient SDK (8 passed; 0 failed)
+# Compile ESM and CommonJS bundles
+npm run build
 ```
 
 ---
 
-## 5. Community & Contributions
-
-- 💬 **Telegram**: [Estamora Community](https://t.me/estamora_stellar)
-- 👾 **Discord**: [Estamora Developers](https://discord.gg/estamora-dev)
-- 👤 **Maintainer**: [@winningtalker-commits](https://github.com/winningtalker-commits)
-
----
-
-## 6. License
+## License
 
 Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
